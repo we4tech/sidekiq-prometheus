@@ -69,6 +69,8 @@ class SidekiqPrometheus::PeriodicMetrics
   ##
   # Record GC and RSS metrics
   def report_gc_metrics
+    Sidekiq.logger.debug('SidekiqPrometheus: Reporting GC metrics')
+
     stats = GC.stat
     GC_STATS[:counters].each do |stat|
       SidekiqPrometheus["sidekiq_#{stat}"]&.increment(labels: {}, by: stats[stat])
@@ -83,12 +85,16 @@ class SidekiqPrometheus::PeriodicMetrics
   ##
   # Records Sidekiq global metrics
   def report_global_metrics
+    Sidekiq.logger.debug('SidekiqPrometheus: Reporting global metrics')
+
     current_stats = sidekiq_stats.new
     GLOBAL_STATS.each do |stat|
+      Sidekiq.logger.debug("SidekiqPrometheus: Reporting global stat: #{stat}")
       SidekiqPrometheus["sidekiq_#{stat}"]&.set(current_stats.send(stat), labels: {})
     end
 
     sidekiq_queue.all.each do |queue|
+      Sidekiq.logger.debug("SidekiqPrometheus: Reporting for queue - #{queue.name}")
       SidekiqPrometheus[:sidekiq_enqueued]&.set(queue.size, labels: { queue: queue.name })
       SidekiqPrometheus[:sidekiq_queue_latency]&.observe(queue.latency, labels: { queue: queue.name })
     end
@@ -97,6 +103,8 @@ class SidekiqPrometheus::PeriodicMetrics
   ##
   # Records metrics from Redis
   def report_redis_metrics
+    Sidekiq.logger.debug('SidekiqPrometheus: Reporting redis metrics')
+
     redis_info = begin
       Sidekiq.redis_info
     rescue Redis::BaseConnectionError
@@ -106,6 +114,8 @@ class SidekiqPrometheus::PeriodicMetrics
     return if redis_info.nil?
 
     REDIS_STATS.each do |stat|
+      Sidekiq.logger.debug("SidekiqPrometheus: Reporting redis stat: #{stat}")
+
       SidekiqPrometheus["sidekiq_redis_#{stat}"]&.set(redis_info[stat].to_i, labels: {})
     end
 
@@ -113,6 +123,9 @@ class SidekiqPrometheus::PeriodicMetrics
     db_stats.each do |db, stat|
       label = { database: db }
       values = stat.scan(/\d+/)
+
+      Sidekiq.logger.debug("SidekiqPrometheus: Reporting redis db - #{db}")
+
       SidekiqPrometheus[:sidekiq_redis_keys]&.set(values[0].to_i, labels: label)
       SidekiqPrometheus[:sidekiq_redis_expires]&.set(values[1].to_i, labels: label)
     end
@@ -133,6 +146,8 @@ class SidekiqPrometheus::PeriodicMetrics
   def run
     until done
       begin
+        Sidekiq.logger.debug('SidekiqPrometheus: Collecting periodic metrics')
+
         report_global_metrics if SidekiqPrometheus.global_metrics_enabled? && senate.leader?
         report_redis_metrics if SidekiqPrometheus.global_metrics_enabled? && senate.leader?
         report_gc_metrics if SidekiqPrometheus.gc_metrics_enabled?
