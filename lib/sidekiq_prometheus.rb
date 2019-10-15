@@ -102,6 +102,7 @@ module SidekiqPrometheus
   # Requires +Sidekiq::Enterprise+ as it uses the leader election functionality
   # @return [Boolean] defaults to true if +Sidekiq::Enterprise+ is available
   def global_metrics_enabled?
+    Sidekiq.logger.debug("SidekiqPrometheus: Ent Const defined? : #{Object.const_defined?('Sidekiq::Enterprise')}, Enabled: #{global_metrics_enabled}")
     Object.const_defined?('Sidekiq::Enterprise') && global_metrics_enabled
   end
 

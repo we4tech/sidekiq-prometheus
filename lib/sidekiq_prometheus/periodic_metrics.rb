@@ -51,6 +51,7 @@ class SidekiqPrometheus::PeriodicMetrics
               else
                 senate
               end
+    Sidekiq.logger.debug("SidekiqPrometheus: Senate: #{@senate}")
   end
 
   ##
@@ -147,6 +148,7 @@ class SidekiqPrometheus::PeriodicMetrics
     until done
       begin
         Sidekiq.logger.debug('SidekiqPrometheus: Collecting periodic metrics')
+        Sidekiq.logger.debug("SidekiqPrometheus: Global metrics?: #{SidekiqPrometheus.global_metrics_enabled?}, senate: #{senate.leader?}")
 
         report_global_metrics if SidekiqPrometheus.global_metrics_enabled? && senate.leader?
         report_redis_metrics if SidekiqPrometheus.global_metrics_enabled? && senate.leader?
